@@ -1,0 +1,5 @@
+- id: forecaster.llm.openai.v1
+  type: forecaster
+  class: cfevals.forecaster_fns.llm:OpenAIForecaster
+  args:
+    model: gpt-4o-mini

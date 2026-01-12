@@ -1,0 +1,7 @@
+id: context_is_key.test.v1
+type: eval
+class: cfevals.elsuite.context_is_key:ContextIsKeyEval
+dataset: dataset.context_is_key.v1
+forecaster_set: forecaster_set.cik.v1
+args:
+  penalty_weight: 1.0

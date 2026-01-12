@@ -1,52 +1,21 @@
 [project]
-name = "evals"
-version = "3.0.1.post1"
+name = "cfevals"
+version = "0.1.0"
 requires-python = ">=3.9"
 readme = "README.md"
 dependencies = [
-    "aiolimiter",
-    "anthropic",
-    "backoff",
-    "beartype>=0.12.0",
-    "blobfile",
-    "chess",
-    "dacite",
+    "chronos-forecasting",
     "datasets",
-    "docker",
-    "evaluate",
-    "filelock",
-    "fire",
-    "flask",
-    "google-generativeai",
-    "gymnasium",
-    "jiwer",
-    "langchain",
-    "langdetect",
-    "lz4",
     "matplotlib",
-    "mock",
-    "mypy",
-    "networkx",
-    "nltk",
-    "numexpr",
+    "neuralforecast",
     "numpy",
     "openai>=1.0.0",
     "pandas",
-    "playwright",
-    "pydantic",
+    "pandas_datareader",
     "pytest",
     "pyyaml",
-    "sacrebleu",
-    "seaborn",
-    "snowflake-connector-python[pandas]",
-    "spacy-universal-sentence-encoder",
-    "statsmodels",
-    "termcolor",
-    "tiktoken",
-    "tqdm",
-    "types-PyYAML",
-    "types-tqdm",
-    "zstandard",
+    "statsforecast",
+    "timesfm",
 ]
 
 [project.urls]
@@ -58,11 +27,15 @@ formatters = ["black", "isort", "autoflake", "ruff"]
 torch = ["torch"]
 
 [project.scripts]
-oaieval = "evals.cli.oaieval:main"
-oaievalset = "evals.cli.oaievalset:main"
+cfeval = "cfevals.cli.cfeval:main"
+cfevalset = "cfevals.cli.cfevalset:main"
 
-[tool.setuptools]
-packages = ["evals"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cfevals", "cfevals.*"]
+
+[tool.setuptools.package-data]
+cfevals = ["registry/**/*.yaml"]
 
 [tool.ruff]
 # Allow lines to be as long as 767 characters, this is currently the longest line
