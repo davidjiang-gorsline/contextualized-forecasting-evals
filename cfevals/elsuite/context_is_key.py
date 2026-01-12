@@ -12,6 +12,11 @@ from cfevals.record import RecorderBase
 class ContextIsKeyEval(Eval):
     forecaster: object
     penalty_weight: float = 1.0
+    seed: int = 0
+    max_samples: int | None = None
+
+    def __post_init__(self) -> None:
+        super().__init__(seed=self.seed, max_samples=self.max_samples)
 
     def eval_sample(self, sample: dict, *, recorder: RecorderBase) -> EvalResult:
         prompt = ForecastPrompt(

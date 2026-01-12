@@ -16,6 +16,11 @@ class FredUnrateEval(Eval):
     train_window: int
     step: int = 1
     use_covariate: bool = False
+    seed: int = 0
+    max_samples: int | None = None
+
+    def __post_init__(self) -> None:
+        super().__init__(seed=self.seed, max_samples=self.max_samples)
 
     def build_samples(self, series: list[float], covariate: list[float] | None = None) -> list[dict]:
         samples = []
