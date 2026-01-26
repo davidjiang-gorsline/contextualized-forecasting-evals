@@ -1,20 +1,19 @@
-import os
+from datetime import datetime, timedelta
 
-from cfevals.eval import Eval, EvalResult
+from cfevals.benchmarks.base import TimeSeriesDataset, TimeSeriesPoint
+from cfevals.engine.backtest import WalkForwardBacktester, WalkForwardConfig
+from cfevals.models.naive import LastValueModel
 from cfevals.record import NullRecorder
 
 
-class DummyEval(Eval):
-    def eval_sample(self, sample: dict, *, recorder):
-        return EvalResult(sample_id=str(sample["sample_id"]), metrics={"value": sample["value"]})
-
-
 def test_seed_determinism():
-    samples = [{"sample_id": str(i), "value": i} for i in range(10)]
-    eval_obj = DummyEval(seed=123)
-    os.environ["EVALS_SEQUENTIAL"] = "1"
-    results_first = eval_obj.run(samples, recorder=NullRecorder())
-    results_second = eval_obj.run(samples, recorder=NullRecorder())
+    start = datetime(2023, 1, 1)
+    points = [TimeSeriesPoint(timestamp=start + timedelta(days=i), value=float(i)) for i in range(15)]
+    dataset = TimeSeriesDataset(points=points)
+    config = WalkForwardConfig(horizon=2, min_train_size=5, step=1)
+
+    results_first = WalkForwardBacktester().run(dataset, LastValueModel(), config, recorder=NullRecorder())
+    results_second = WalkForwardBacktester().run(dataset, LastValueModel(), config, recorder=NullRecorder())
     order_first = [res.sample_id for res in results_first]
     order_second = [res.sample_id for res in results_second]
     assert order_first == order_second

@@ -1,0 +1,5 @@
+id: model.chronos.t5.small.v1
+type: model
+class: cfevals.models.chronos:ChronosModel
+args:
+  model_name: amazon/chronos-t5-small

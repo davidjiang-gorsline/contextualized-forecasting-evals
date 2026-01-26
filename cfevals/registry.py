@@ -15,11 +15,9 @@ DEFAULT_REGISTRY_PATHS = [
 
 @dataclass
 class Registry:
-    evals: dict[str, dict[str, Any]] = field(default_factory=dict)
-    datasets: dict[str, dict[str, Any]] = field(default_factory=dict)
-    forecasters: dict[str, dict[str, Any]] = field(default_factory=dict)
-    forecaster_sets: dict[str, dict[str, Any]] = field(default_factory=dict)
-    eval_sets: dict[str, dict[str, Any]] = field(default_factory=dict)
+    benchmarks: dict[str, dict[str, Any]] = field(default_factory=dict)
+    models: dict[str, dict[str, Any]] = field(default_factory=dict)
+    benchmark_sets: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def load(self, paths: list[str] | None = None) -> "Registry":
         for base in paths or DEFAULT_REGISTRY_PATHS:
@@ -44,33 +42,25 @@ class Registry:
         if not isinstance(payload, dict) or "id" not in payload:
             return
         spec_id = payload["id"]
-        if "class" in payload:
-            if spec_id.startswith("dataset") or payload.get("type") == "dataset":
-                self.datasets[spec_id] = payload
-            elif payload.get("type") == "forecaster":
-                self.forecasters[spec_id] = payload
-            elif payload.get("type") == "eval":
-                self.evals[spec_id] = payload
-            else:
-                self.evals[spec_id] = payload
-        elif "members" in payload:
-            self.forecaster_sets[spec_id] = payload
-        elif payload.get("type") == "eval_set":
-            self.eval_sets[spec_id] = payload
-        else:
-            self.evals[spec_id] = payload
+        payload_type = payload.get("type")
+        if payload_type == "benchmark":
+            self.benchmarks[spec_id] = payload
+            return
+        if payload_type == "model":
+            self.models[spec_id] = payload
+            return
+        if payload_type == "benchmark_set":
+            self.benchmark_sets[spec_id] = payload
+            return
+        if "benchmarks" in payload:
+            self.benchmark_sets[spec_id] = payload
+            return
 
-    def get_eval(self, eval_id: str) -> dict[str, Any]:
-        return self.evals[eval_id]
+    def get_benchmark(self, benchmark_id: str) -> dict[str, Any]:
+        return self.benchmarks[benchmark_id]
 
-    def get_dataset(self, dataset_id: str) -> dict[str, Any]:
-        return self.datasets[dataset_id]
+    def get_model(self, model_id: str) -> dict[str, Any]:
+        return self.models[model_id]
 
-    def get_forecaster(self, forecaster_id: str) -> dict[str, Any]:
-        return self.forecasters[forecaster_id]
-
-    def get_forecaster_set(self, set_id: str) -> dict[str, Any]:
-        return self.forecaster_sets[set_id]
-
-    def get_eval_set(self, set_id: str) -> dict[str, Any]:
-        return self.eval_sets[set_id]
+    def get_benchmark_set(self, set_id: str) -> dict[str, Any]:
+        return self.benchmark_sets[set_id]

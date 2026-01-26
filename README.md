@@ -1,14 +1,34 @@
 # cfevals
 
-Minimal, registry-first evaluation harness for contextualized forecasting.
+Registry-first evaluation harness for time-series benchmarks with strict walk-forward backtesting.
 
-## Quickstart
+## Quickstart (uv + Python 3.13)
 
 ```bash
-pip install -e .
-cfeval fred_unrate.test.v1 --forecasters forecaster_set.fred.v1
-cfeval context_is_key.test.v1 --forecasters forecaster_set.cik.v1
-cfevalset starter_set.v1
+uv venv --python 3.13
+source .venv/bin/activate
+uv sync
 ```
 
-Outputs are written under `outputs/<eval_id>/<run_id>/<forecaster_id>/`.
+## Run CiK (Context Is Key)
+
+```bash
+cfeval benchmark.cik.v1 --model model.naive.last.v1
+```
+
+## Run FRED (walk-forward backtest)
+
+```bash
+cfeval benchmark.fred.unrate.v1 --model model.naive.last.v1
+```
+
+Outputs are written under `outputs/<benchmark_id>/<run_id>/<model_id>/`.
+
+## Optional model dependencies
+
+To enable Chronos or OpenAI adapters, install the optional extras:
+
+```bash
+uv sync --extra chronos
+uv sync --extra openai
+```

@@ -1,0 +1,13 @@
+id: benchmark.fred.unrate.v1
+type: benchmark
+kind: time_series
+class: cfevals.benchmarks.fred:FredUnrateBenchmark
+args:
+  target_series: UNRATE
+  covariate_series: null
+  start_date: "1976-01-01"
+backtest:
+  horizon: 6
+  step: 1
+  min_train_size: 120
+  max_train_size: 240

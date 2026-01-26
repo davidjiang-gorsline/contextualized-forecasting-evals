@@ -7,8 +7,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from cfevals.forecaster_fns.base import ForecastResult
-from cfevals.prompts import ForecastPrompt
+from cfevals.models.base import ForecastRequest, ForecastResult, Model
 
 
 def parse_json_response(text: str) -> dict[str, Any]:
@@ -22,7 +21,7 @@ def parse_json_response(text: str) -> dict[str, Any]:
 
 
 @dataclass
-class OpenAIForecaster:
+class OpenAIModel(Model):
     model: str = "gpt-4o-mini"
     max_retries: int = 2
 
@@ -35,8 +34,8 @@ class OpenAIForecaster:
 
         self.client = OpenAI()
 
-    def __call__(self, prompt: ForecastPrompt) -> ForecastResult:
-        messages = prompt.to_chat_messages()
+    def predict(self, request: ForecastRequest) -> ForecastResult:
+        messages = _build_messages(request)
         last_error = None
         for _ in range(self.max_retries + 1):
             response = self.client.chat.completions.create(
@@ -65,3 +64,25 @@ class OpenAIForecaster:
                     {"role": "user", "content": "Return ONLY valid JSON with point_forecast."},
                 ]
         raise RuntimeError(f"LLM response parsing failed: {last_error}")
+
+
+def _build_messages(request: ForecastRequest) -> list[dict[str, str]]:
+    lines = [
+        "You are a forecasting model.",
+        f"History: {request.history}",
+        f"Horizon: {request.horizon}",
+    ]
+    if request.features:
+        lines.append(f"Features: {request.features}")
+    if request.context_text:
+        lines.append(f"Context: {request.context_text}")
+    if request.metadata:
+        lines.append(f"Metadata: {request.metadata}")
+    prompt = "\n".join(lines)
+    system = {"role": "system", "content": "You are a forecasting assistant that returns JSON only."}
+    user = {
+        "role": "user",
+        "content": prompt
+        + "\nReturn JSON with keys: point_forecast (list), quantiles (dict) or samples (list of lists).",
+    }
+    return [system, user]

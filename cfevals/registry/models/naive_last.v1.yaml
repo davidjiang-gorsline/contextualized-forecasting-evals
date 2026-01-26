@@ -1,0 +1,4 @@
+id: model.naive.last.v1
+type: model
+class: cfevals.models.naive:LastValueModel
+args: {}

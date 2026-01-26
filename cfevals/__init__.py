@@ -1,7 +1,5 @@
-"""Compact contextualized forecasting evals."""
+"""Registry-first time-series evaluation harness."""
 
-from cfevals.eval import Eval
 from cfevals.registry import Registry
-from cfevals.record import LocalRecorder, RecorderBase
 
-__all__ = ["Eval", "Registry", "LocalRecorder", "RecorderBase"]
+__all__ = ["Registry"]

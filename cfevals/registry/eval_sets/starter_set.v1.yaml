@@ -1,6 +1,0 @@
-id: starter_set.v1
-type: eval_set
-evals:
-  - fred_unrate.test.v1
-  - fred_unrate_with_epu.test.v1
-  - context_is_key.test.v1

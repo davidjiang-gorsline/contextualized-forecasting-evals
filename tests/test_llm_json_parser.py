@@ -1,4 +1,4 @@
-from cfevals.forecaster_fns.llm import parse_json_response
+from cfevals.models.llm import parse_json_response
 
 
 def test_llm_json_parser():

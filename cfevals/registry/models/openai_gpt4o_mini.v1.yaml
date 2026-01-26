@@ -1,0 +1,5 @@
+id: model.openai.gpt4o-mini.v1
+type: model
+class: cfevals.models.llm:OpenAIModel
+args:
+  model: gpt-4o-mini

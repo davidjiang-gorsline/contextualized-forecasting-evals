@@ -1,28 +1,24 @@
 [project]
 name = "cfevals"
 version = "0.1.0"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 readme = "README.md"
 dependencies = [
-    "chronos-forecasting",
     "datasets",
-    "matplotlib",
-    "neuralforecast",
     "numpy",
-    "openai",
-    "pytest",
+    "pandas",
+    "pandas-datareader",
     "pyyaml",
-    "statsforecast",
-    "timesfm",
 ]
 
 [project.urls]
 repository = "https://github.com/openai/evals"
 
 [project.optional-dependencies]
+dev = ["pytest"]
 formatters = ["black", "isort", "autoflake", "ruff"]
-
-torch = ["torch"]
+chronos = ["chronos-forecasting", "torch"]
+openai = ["openai"]
 
 [project.scripts]
 cfeval = "cfevals.cli.cfeval:main"
@@ -34,3 +30,9 @@ include = ["cfevals", "cfevals.*"]
 
 [tool.setuptools.package-data]
 cfevals = ["registry/**/*.yaml"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.uv]
+package = true

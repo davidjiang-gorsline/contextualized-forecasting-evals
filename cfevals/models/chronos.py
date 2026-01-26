@@ -5,12 +5,11 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from cfevals.forecaster_fns.base import ForecastResult
-from cfevals.prompts import ForecastPrompt
+from cfevals.models.base import ForecastRequest, ForecastResult, Model
 
 
 @dataclass
-class ChronosForecaster:
+class ChronosModel(Model):
     model_name: str = "amazon/chronos-t5-small"
 
     def __post_init__(self) -> None:
@@ -20,9 +19,9 @@ class ChronosForecaster:
 
         self.pipeline = ChronosPipeline.from_pretrained(self.model_name)
 
-    def __call__(self, prompt: ForecastPrompt) -> ForecastResult:
-        history = np.asarray(prompt.history, dtype=float)
-        forecast = self.pipeline.predict(history, prediction_length=prompt.horizon)
+    def predict(self, request: ForecastRequest) -> ForecastResult:
+        history = np.asarray(request.history, dtype=float)
+        forecast = self.pipeline.predict(history, prediction_length=request.horizon)
         values = forecast.mean(axis=0).tolist()
         samples = forecast.tolist()
         return ForecastResult(point_forecast=[float(v) for v in values], samples=samples)

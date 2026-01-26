@@ -1,7 +1,0 @@
-- id: dataset.context_is_key.v1
-  type: dataset
-  class: cfevals.data:ContextIsKeyLoader
-  args:
-    dataset_name: ServiceNow/context-is-key
-    split: test
-    max_samples: 50

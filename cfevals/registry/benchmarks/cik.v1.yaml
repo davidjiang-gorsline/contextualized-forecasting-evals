@@ -1,0 +1,7 @@
+id: benchmark.cik.v1
+type: benchmark
+kind: scenario
+class: cfevals.benchmarks.context_is_key:ContextIsKeyBenchmark
+args:
+  split: test
+  max_samples: null
