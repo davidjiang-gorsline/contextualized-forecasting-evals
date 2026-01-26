@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.urls]
-repository = "https://github.com/openai/evals"
+repository = "https://github.com/davidjiang-gorsline/contextualized-forecasting-evals"
 
 [project.optional-dependencies]
 dev = ["pytest"]
