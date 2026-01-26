@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from cfevals.benchmarks.base import TimeSeriesDataset, WalkForwardWindow
+from cfevals.engine.validation import validate_forecast_result
 from cfevals.metrics.point import mae, mase, rmse, smape
 from cfevals.models.base import ForecastRequest, ForecastResult, Model
 from cfevals.record import RecorderBase
@@ -50,6 +51,11 @@ class WalkForwardBacktester:
 
             request = _build_request(window, config.horizon)
             forecast_result = model.predict(request)
+            validate_forecast_result(
+                forecast_result,
+                config.horizon,
+                context=f"backtest window {window.window_index}",
+            )
             metrics = _compute_metrics(window, forecast_result)
             sample_id = f"{window.window_index:05d}-{window.as_of.date()}"
             result = BacktestResult(

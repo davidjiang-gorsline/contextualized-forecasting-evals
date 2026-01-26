@@ -23,7 +23,9 @@ class Registry:
         for base in paths or DEFAULT_REGISTRY_PATHS:
             if not os.path.isdir(base):
                 continue
-            for root, _, files in os.walk(base):
+            for root, dirs, files in os.walk(base):
+                dirs.sort()
+                files.sort()
                 for fname in files:
                     if not fname.endswith(".yaml"):
                         continue

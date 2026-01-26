@@ -19,7 +19,7 @@ def test_cik_loader_smoke(monkeypatch):
                 ]
             )
 
-    def fake_load_dataset(name, split):
+    def fake_load_dataset(name, split, cache_dir=None):
         return DummyDataset()
 
     monkeypatch.setattr("datasets.load_dataset", fake_load_dataset)

@@ -77,7 +77,8 @@ def _render_markdown(payload: dict[str, Any]) -> str:
         "",
         "## Metrics",
     ]
-    for key, value in payload["metrics"].items():
+    for key in sorted(payload["metrics"].keys()):
+        value = payload["metrics"][key]
         lines.append(f"- **{key}**: {value:.4f}")
     return "\n".join(lines)
 
