@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from cfevals.benchmarks.base import TimeSeriesDataset, TimeSeriesPoint
+from cfevals.context import ContextEvent
 from cfevals.engine.backtest import WalkForwardBacktester, WalkForwardConfig
 from cfevals.models.naive import LastValueModel
 from cfevals.record import NullRecorder
@@ -9,7 +10,17 @@ from cfevals.record import NullRecorder
 def test_seed_determinism():
     start = datetime(2023, 1, 1)
     points = [TimeSeriesPoint(timestamp=start + timedelta(days=i), value=float(i)) for i in range(15)]
-    dataset = TimeSeriesDataset(points=points)
+    dataset = TimeSeriesDataset(
+        points=points,
+        context_events=[
+            ContextEvent(
+                event_time=start,
+                available_at=start,
+                text="Deterministic context seed event",
+                source="test",
+            )
+        ],
+    )
     config = WalkForwardConfig(horizon=2, min_train_size=5, step=1)
 
     results_first = WalkForwardBacktester().run(dataset, LastValueModel(), config, recorder=NullRecorder())

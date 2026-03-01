@@ -1,0 +1,16 @@
+id: benchmark.fnspid.news_volume.primary.v1
+type: benchmark
+kind: time_series
+class: cfevals.benchmarks.fnspid:FNSPIDNewsVolumeBenchmark
+args:
+  dataset_name: sabareesh88/FNSPID_nasdaq
+  symbol: A
+  max_rows: 500
+  min_points: 20
+  streaming: true
+  max_scan_rows_multiplier: 10
+backtest:
+  horizon: 3
+  step: 1
+  min_train_size: 20
+  max_train_size: 252

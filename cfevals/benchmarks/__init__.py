@@ -8,6 +8,7 @@ from cfevals.benchmarks.base import (
     TimeSeriesPoint,
     WalkForwardWindow,
 )
+from cfevals.context import ContextEvent
 
 __all__ = [
     "AsOfSlice",
@@ -18,4 +19,5 @@ __all__ = [
     "TimeSeriesDataset",
     "TimeSeriesPoint",
     "WalkForwardWindow",
+    "ContextEvent",
 ]

@@ -8,10 +8,13 @@
 - Roadmap: expand to MoTime, FNSPID, TGTSF, MoAT, Time-MMD, TimeText, News-Signal Library; add time-series CV utilities, detrend/deseasonalize helpers, event forecasting, and more model adapters (TimeGPT, Chronos variants, ARIMA/Moirai baselines).
 
 ## Current Capabilities
-- Benchmarks: `benchmark.cik.v1` (Context Is Key), synthetic multi-frequency walk-forward benchmarks (`benchmark.synthetic.{hourly,daily,weekly,monthly}.v1`).
+- Benchmarks: `benchmark.cik.v1` (Context Is Key), synthetic multi-frequency walk-forward benchmarks (`benchmark.synthetic.{hourly,daily,weekly,monthly}.v1`), and `benchmark.fnspid.news_volume.primary.v1`.
 - Models: `model.naive.last.v1`, `model.chronos.t5.small.v1`, `model.openai.gpt4o-mini.v1` (optional extras).
 - CLI: `cfeval` and `cfevalset`.
 - Outputs: `outputs/<benchmark_id>/<run_id>/<model_id>/{events.jsonl,results.json,results.md}`.
+- Time-series requests now include as-of timestamped context events plus rendered context text.
+- Context is mandatory in forecasting requests; benchmark loaders must provide timestamped context events.
+- FNSPID benchmark ingestion is parquet-shard based for deterministic termination and explicit scan bounds.
 
 ## Architecture Map
 - `cfevals/benchmarks/`: Benchmark loaders that return `TimeSeriesDataset` or `ScenarioSample`.
@@ -23,9 +26,9 @@
 - `tests/`: Fast, deterministic tests; no network access.
 
 ## Core Contracts (Do Not Break)
-- `ForecastRequest` is the only model input. Use `history`, `horizon`, optional `timestamps`, `features`, `context_text`, `metadata`.
+- `ForecastRequest` is the only model input. Always include `history`, `horizon`, timestamped `context_events`, plus optional `timestamps`, `features`, `context_text`, `metadata`.
 - `ForecastResult.point_forecast` length must equal `horizon`. If present, `samples` or `quantiles` must align to `horizon`.
-- `TimeSeriesDataset.walk_forward_windows` defines the no-leakage boundary; history and features must be as-of the window cutoff.
+- `TimeSeriesDataset.walk_forward_windows` defines the no-leakage boundary; history, features, and context events must all be as-of the window cutoff.
 - Scenario benchmarks use `ScenarioSample` and are scored with RCRPS; time-series benchmarks use walk-forward metrics.
 - Treat `cfevals/benchmarks/base.py` and `cfevals/models/base.py` as stable contracts.
 
@@ -33,6 +36,7 @@
 - Determinism: stable ordering, no hidden randomness, no implicit shuffling.
 - No leakage: never pass future values or features into `history`.
 - Backtests respect `WalkForwardConfig` and retraining policy; use `fit` only for as-of training.
+- Critical failures are explicit: invalid registry IDs, malformed forecasts, non-finite metrics, or missing context should raise immediately with actionable messages.
 
 ## Benchmark and Model Extension Rules
 - Benchmarks must be self-contained and deterministic; download data from Hugging Face or source APIs with local caching.

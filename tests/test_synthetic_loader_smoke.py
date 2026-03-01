@@ -11,4 +11,6 @@ def test_synthetic_loader_smoke():
     assert len(dataset.points) == 32
     assert dataset.frequency == "H"
     assert dataset.metadata["seasonal_period"] == 24
+    assert dataset.metadata["context_event_count"] > 0
+    assert len(dataset.context_events) > 0
     assert "known_covariate" in dataset.points[0].features

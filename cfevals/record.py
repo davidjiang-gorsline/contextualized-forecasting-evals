@@ -33,25 +33,33 @@ class LocalRecorder(RecorderBase):
 
     def __post_init__(self) -> None:
         super().__init__()
-        os.makedirs(os.path.dirname(self.path), exist_ok=True)
-        self._fh = open(self.path, "a", encoding="utf-8")
+        directory = os.path.dirname(self.path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        self._fh = open(self.path, "w", encoding="utf-8")
         self._lock = threading.Lock()
+        self._closed = False
 
     def record_event(self, event_type: str, payload: dict[str, Any], *, sample_id: str | None = None) -> None:
+        if self._closed:
+            raise RuntimeError("LocalRecorder is already closed")
         event = {
             "event_type": event_type,
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "sample_id": sample_id or self._sample_id,
             "payload": payload,
         }
-        line = json.dumps(event)
+        line = json.dumps(event, default=str)
         with self._lock:
             self._fh.write(line + "\n")
             self._fh.flush()
 
     def close(self) -> None:
         with self._lock:
+            if self._closed:
+                return
             self._fh.close()
+            self._closed = True
 
 
 _thread_local = threading.local()

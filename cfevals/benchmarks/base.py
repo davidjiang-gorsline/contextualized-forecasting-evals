@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import abc
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Iterable
+
+from cfevals.context import ContextEvent
 
 
 @dataclass(frozen=True)
@@ -30,16 +32,31 @@ class WalkForwardWindow:
     future_timestamps: list[datetime]
     future_features: dict[str, list[float]]
     window_index: int
+    context_events: list[ContextEvent] = field(default_factory=list)
 
 
 @dataclass
 class TimeSeriesDataset:
     points: list[TimeSeriesPoint]
+    context_events: list[ContextEvent] = field(default_factory=list)
     frequency: str | None = None
     metadata: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
+        if not self.points:
+            raise ValueError("TimeSeriesDataset.points cannot be empty")
+        for idx, point in enumerate(self.points):
+            if not isinstance(point.timestamp, datetime):
+                raise TypeError(f"TimeSeriesDataset.points[{idx}].timestamp must be datetime")
         self.points.sort(key=lambda point: point.timestamp)
+        self.context_events.sort(
+            key=lambda event: (
+                event.as_of_time,
+                event.event_time,
+                event.modality,
+                event.text,
+            )
+        )
 
     def as_of(self, timestamp: datetime) -> AsOfSlice:
         history_points = [p for p in self.points if p.timestamp <= timestamp]
@@ -49,6 +66,9 @@ class TimeSeriesDataset:
         timestamps = [p.timestamp for p in history_points]
         features = _collect_feature_series(history_points)
         return AsOfSlice(history=history, timestamps=timestamps, features=features)
+
+    def context_as_of(self, timestamp: datetime) -> list[ContextEvent]:
+        return [event for event in self.context_events if event.as_of_time <= timestamp]
 
     def walk_forward_windows(
         self,
@@ -75,6 +95,7 @@ class TimeSeriesDataset:
             future_timestamps = [p.timestamp for p in future_points]
             history_features = _collect_feature_series(history_points)
             future_features = _collect_feature_series(future_points)
+            context_events = self.context_as_of(history_timestamps[-1])
             yield WalkForwardWindow(
                 as_of=history_timestamps[-1],
                 history=history,
@@ -83,6 +104,7 @@ class TimeSeriesDataset:
                 future=future,
                 future_timestamps=future_timestamps,
                 future_features=future_features,
+                context_events=context_events,
                 window_index=window_index,
             )
             window_index += 1
@@ -96,6 +118,7 @@ class ScenarioSample:
     sample_id: str
     history: list[float]
     future: list[float]
+    context_events: list[ContextEvent] = field(default_factory=list)
     context_text: str | None = None
     roi: tuple[float, float] | None = None
     metadata: dict[str, Any] | None = None
@@ -133,3 +156,9 @@ def _collect_feature_series(points: list[TimeSeriesPoint]) -> dict[str, list[flo
         for key, value in point.features.items():
             features.setdefault(key, []).append(float(value))
     return features
+
+
+# TODO(P0): Extend TimeSeriesPoint/ContextEvent with explicit publication and
+# revision identifiers for point-in-time auditability.
+# TODO(P1): Add panel-native dataset contracts (series_id/asset_id) with grouped CV support.
+# TODO(P2): Add dataset-level schema checks for multimodal payload completeness and consistency.

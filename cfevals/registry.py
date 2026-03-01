@@ -30,8 +30,11 @@ class Registry:
                     if not fname.endswith(".yaml"):
                         continue
                     full_path = os.path.join(root, fname)
-                    with open(full_path, "r", encoding="utf-8") as f:
-                        payload = yaml.safe_load(f) or {}
+                    try:
+                        with open(full_path, "r", encoding="utf-8") as f:
+                            payload = yaml.safe_load(f) or {}
+                    except Exception as exc:  # noqa: BLE001
+                        raise RuntimeError(f"Failed to parse registry YAML at {full_path}") from exc
                     self._register_payload(payload)
         return self
 
@@ -59,10 +62,28 @@ class Registry:
             return
 
     def get_benchmark(self, benchmark_id: str) -> dict[str, Any]:
+        if benchmark_id not in self.benchmarks:
+            available = ", ".join(sorted(self.benchmarks.keys())[:20])
+            raise KeyError(
+                f"Unknown benchmark id {benchmark_id!r}. "
+                f"Available benchmark ids: {available}"
+            )
         return self.benchmarks[benchmark_id]
 
     def get_model(self, model_id: str) -> dict[str, Any]:
+        if model_id not in self.models:
+            available = ", ".join(sorted(self.models.keys())[:20])
+            raise KeyError(
+                f"Unknown model id {model_id!r}. "
+                f"Available model ids: {available}"
+            )
         return self.models[model_id]
 
     def get_benchmark_set(self, set_id: str) -> dict[str, Any]:
+        if set_id not in self.benchmark_sets:
+            available = ", ".join(sorted(self.benchmark_sets.keys())[:20])
+            raise KeyError(
+                f"Unknown benchmark set id {set_id!r}. "
+                f"Available benchmark set ids: {available}"
+            )
         return self.benchmark_sets[set_id]

@@ -4,9 +4,11 @@ import json
 import math
 import os
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Any
 
 from cfevals.benchmarks.base import ScenarioBenchmark, ScenarioSample
+from cfevals.context import ContextEvent, render_context_text
 
 
 @dataclass
@@ -21,6 +23,7 @@ class ContextIsKeyBenchmark(ScenarioBenchmark):
     def load(self) -> list[ScenarioSample]:
         from datasets import load_dataset  # noqa: PLC0415
 
+        _validate_config(self)
         cache_dir = self.cache_dir or os.environ.get("CFEVALS_CACHE")
         try:
             ds = load_dataset(
@@ -48,6 +51,11 @@ class ContextIsKeyBenchmark(ScenarioBenchmark):
             samples.append(sample)
         if not samples and self.allow_fallback:
             return _fallback_samples()
+        if not samples:
+            raise ValueError(
+                f"CiK benchmark {self.dataset_name!r} produced zero valid samples. "
+                "Expected numeric history/future and at least one context event per sample."
+            )
         return samples
 
 
@@ -60,9 +68,10 @@ def _build_sample(row: dict[str, Any], idx: int, *, dataset_name: str) -> Scenar
     if not future:
         return None
 
-    context = row.get("context")
-    if not context:
-        context = _build_context_text(row)
+    context_events = _build_context_events(row, idx=idx)
+    if not context_events:
+        return None
+    context = render_context_text(context_events)
 
     roi = _parse_roi(row.get("roi"))
     if roi is None:
@@ -89,27 +98,60 @@ def _build_sample(row: dict[str, Any], idx: int, *, dataset_name: str) -> Scenar
         history=history,
         future=future,
         context_text=context,
+        context_events=context_events,
         roi=roi,
         metadata=metadata,
     )
 
 
-def _build_context_text(row: dict[str, Any]) -> str | None:
-    if row.get("context"):
-        return str(row.get("context"))
-    parts: list[str] = []
+def _build_context_events(row: dict[str, Any], *, idx: int) -> list[ContextEvent]:
+    ref_time = _infer_reference_time(row, idx=idx)
+    events: list[ContextEvent] = []
     background = row.get("background")
     if background:
-        parts.append(f"Background: {background}")
+        events.append(
+            ContextEvent(
+                event_time=ref_time - timedelta(minutes=2),
+                available_at=ref_time - timedelta(minutes=2),
+                text=f"Background: {background}",
+                modality="text",
+                source="context_is_key.background",
+            )
+        )
+    context = row.get("context")
+    if context:
+        events.append(
+            ContextEvent(
+                event_time=ref_time - timedelta(minutes=1),
+                available_at=ref_time - timedelta(minutes=1),
+                text=str(context),
+                modality="text",
+                source="context_is_key.context",
+            )
+        )
     scenario = row.get("scenario")
     if scenario:
-        parts.append(f"Scenario: {scenario}")
+        events.append(
+            ContextEvent(
+                event_time=ref_time,
+                available_at=ref_time,
+                text=f"Scenario: {scenario}",
+                modality="text",
+                source="context_is_key.scenario",
+            )
+        )
     constraints = row.get("constraints")
     if constraints:
-        parts.append(f"Constraints: {constraints}")
-    if not parts:
-        return None
-    return "\n".join(parts)
+        events.append(
+            ContextEvent(
+                event_time=ref_time,
+                available_at=ref_time,
+                text=f"Constraints: {constraints}",
+                modality="text",
+                source="context_is_key.constraints",
+            )
+        )
+    return events
 
 
 def _parse_numeric_series(value: Any) -> list[float]:
@@ -193,13 +235,66 @@ def _parse_constraint_roi(row: dict[str, Any]) -> tuple[float, float] | None:
     return (low, high)
 
 
+def _infer_reference_time(row: dict[str, Any], *, idx: int) -> datetime:
+    past_time = _maybe_json(row.get("past_time"))
+    if isinstance(past_time, dict) and past_time:
+        parsed = _parse_datetime_keys(past_time)
+        if parsed:
+            return parsed[-1]
+    return datetime(1970, 1, 1) + timedelta(seconds=idx)
+
+
+def _parse_datetime_keys(payload: Any) -> list[datetime]:
+    times: list[datetime] = []
+    if isinstance(payload, dict):
+        values = payload.values()
+        if any(isinstance(v, dict) for v in values):
+            for value in values:
+                times.extend(_parse_datetime_keys(value))
+            return sorted(times)
+        for key in payload.keys():
+            dt = _parse_datetime(key)
+            if dt is not None:
+                times.append(dt)
+    return sorted(times)
+
+
+def _parse_datetime(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is not None:
+        return parsed.astimezone(datetime.UTC).replace(tzinfo=None)
+    return parsed
+
+
 def _fallback_samples() -> list[ScenarioSample]:
+    event = ContextEvent(
+        event_time=datetime(1970, 1, 1),
+        available_at=datetime(1970, 1, 1),
+        text="Synthetic fallback sample.",
+        modality="text",
+        source="context_is_key.fallback",
+    )
     return [
         ScenarioSample(
             sample_id="cik-fallback-0",
             history=[1.0, 2.0, 3.0],
             future=[3.5, 3.7],
-            context_text="Synthetic fallback sample.",
+            context_text=render_context_text([event]),
+            context_events=[event],
             roi=(0.0, 10.0),
         )
     ]
+
+
+def _validate_config(config: ContextIsKeyBenchmark) -> None:
+    if not config.dataset_name:
+        raise ValueError("dataset_name must be set for ContextIsKeyBenchmark")
+    if not config.split:
+        raise ValueError("split must be set for ContextIsKeyBenchmark")
+    if config.max_samples is not None and config.max_samples <= 0:
+        raise ValueError("max_samples must be > 0 when provided")

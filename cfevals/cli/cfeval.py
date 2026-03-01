@@ -9,9 +9,21 @@ from cfevals.registry import Registry
 
 
 def load_class(path: str):
-    module_name, class_name = path.split(":")
-    module = __import__(module_name, fromlist=[class_name])
-    return getattr(module, class_name)
+    if ":" not in path:
+        raise ValueError(
+            f"Invalid registry class path {path!r}. Expected format 'package.module:ClassName'."
+        )
+    module_name, class_name = path.split(":", maxsplit=1)
+    try:
+        module = __import__(module_name, fromlist=[class_name])
+    except Exception as exc:  # noqa: BLE001
+        raise ImportError(f"Failed to import module {module_name!r} for class path {path!r}") from exc
+    try:
+        return getattr(module, class_name)
+    except AttributeError as exc:
+        raise AttributeError(
+            f"Class {class_name!r} not found in module {module_name!r} for registry path {path!r}"
+        ) from exc
 
 
 def build_benchmark(spec: dict[str, Any]):
@@ -54,14 +66,19 @@ def run_eval(args: argparse.Namespace) -> None:
     backtest_config = build_backtest_config(benchmark_spec, overrides)
 
     output_dir = Path("outputs") / args.benchmark_id / args.run_id / args.model_id
-    Runner().run(
-        benchmark_id=args.benchmark_id,
-        benchmark=benchmark,
-        model_id=args.model_id,
-        model=model,
-        output_dir=output_dir,
-        backtest_config=backtest_config,
-    )
+    try:
+        Runner().run(
+            benchmark_id=args.benchmark_id,
+            benchmark=benchmark,
+            model_id=args.model_id,
+            model=model,
+            output_dir=output_dir,
+            backtest_config=backtest_config,
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(
+            f"Evaluation failed for benchmark={args.benchmark_id!r} model={args.model_id!r}: {exc}"
+        ) from exc
 
 
 def main() -> None:

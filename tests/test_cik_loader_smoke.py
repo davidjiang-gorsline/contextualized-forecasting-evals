@@ -26,6 +26,8 @@ def test_cik_loader_smoke(monkeypatch):
     benchmark = ContextIsKeyBenchmark(max_samples=1)
     samples = benchmark.load()
     assert samples[0].sample_id == "cik-1"
+    assert len(samples[0].context_events) > 0
+    assert samples[0].context_text is not None
 
 
 def test_cik_loader_parses_current_schema(monkeypatch):
@@ -58,3 +60,4 @@ def test_cik_loader_parses_current_schema(monkeypatch):
     assert samples[0].history == [1.0, 2.0]
     assert samples[0].future == [3.0, 4.0]
     assert samples[0].roi == (0.0, 10.0)
+    assert len(samples[0].context_events) >= 1

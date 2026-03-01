@@ -31,14 +31,19 @@ def main() -> None:
         benchmark_spec = registry.get_benchmark(benchmark_id)
         benchmark = build_benchmark(benchmark_spec)
         backtest_config = build_backtest_config(benchmark_spec, {})
-        Runner().run(
-            benchmark_id=benchmark_id,
-            benchmark=benchmark,
-            model_id=args.model_id,
-            model=model,
-            output_dir=output_dir,
-            backtest_config=backtest_config,
-        )
+        try:
+            Runner().run(
+                benchmark_id=benchmark_id,
+                benchmark=benchmark,
+                model_id=args.model_id,
+                model=model,
+                output_dir=output_dir,
+                backtest_config=backtest_config,
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(
+                f"Benchmark set run failed at benchmark={benchmark_id!r} model={args.model_id!r}: {exc}"
+            ) from exc
 
 
 if __name__ == "__main__":

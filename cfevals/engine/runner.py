@@ -35,40 +35,41 @@ class Runner:
     ) -> RunOutput:
         output_dir.mkdir(parents=True, exist_ok=True)
         recorder = LocalRecorder(str(output_dir / "events.jsonl"))
+        try:
+            if isinstance(benchmark, TimeSeriesBenchmark):
+                dataset = benchmark.load()
+                config = backtest_config or WalkForwardConfig(horizon=1)
+                results = WalkForwardBacktester().run(dataset, model, config, recorder=recorder)
+                if not results:
+                    raise ValueError(
+                        f"No walk-forward windows were produced for benchmark {benchmark_id!r}. "
+                        "Check horizon/min_train_size/max_windows settings."
+                    )
+                metrics = _aggregate_metrics([result.metrics for result in results])
+                payload = {
+                    "benchmark_id": benchmark_id,
+                    "model_id": model_id,
+                    "metrics": metrics,
+                    "num_samples": len(results),
+                }
+            else:
+                samples = benchmark.load()
+                results = ScenarioEvaluator().run(samples, model, recorder=recorder)
+                if not results:
+                    raise ValueError(
+                        f"No scenario samples were scored for benchmark {benchmark_id!r}. "
+                        "Check dataset parsing and sample filters."
+                    )
+                metrics = {"rcrps": sum(r.metric for r in results) / len(results) if results else 0.0}
+                payload = {
+                    "benchmark_id": benchmark_id,
+                    "model_id": model_id,
+                    "metrics": metrics,
+                    "num_samples": len(results),
+                }
+        finally:
+            recorder.close()
 
-        if isinstance(benchmark, TimeSeriesBenchmark):
-            dataset = benchmark.load()
-            config = backtest_config or WalkForwardConfig(horizon=1)
-            results = WalkForwardBacktester().run(dataset, model, config, recorder=recorder)
-            if not results:
-                raise ValueError(
-                    f"No walk-forward windows were produced for benchmark {benchmark_id!r}. "
-                    "Check horizon/min_train_size/max_windows settings."
-                )
-            metrics = _aggregate_metrics([result.metrics for result in results])
-            payload = {
-                "benchmark_id": benchmark_id,
-                "model_id": model_id,
-                "metrics": metrics,
-                "num_samples": len(results),
-            }
-        else:
-            samples = benchmark.load()
-            results = ScenarioEvaluator().run(samples, model, recorder=recorder)
-            if not results:
-                raise ValueError(
-                    f"No scenario samples were scored for benchmark {benchmark_id!r}. "
-                    "Check dataset parsing and sample filters."
-                )
-            metrics = {"rcrps": sum(r.metric for r in results) / len(results) if results else 0.0}
-            payload = {
-                "benchmark_id": benchmark_id,
-                "model_id": model_id,
-                "metrics": metrics,
-                "num_samples": len(results),
-            }
-
-        recorder.close()
         (output_dir / "results.json").write_text(json.dumps(payload, indent=2))
         (output_dir / "results.md").write_text(_render_markdown(payload))
         return RunOutput(**payload)
@@ -76,13 +77,24 @@ class Runner:
 
 def _aggregate_metrics(metrics_list: list[dict[str, float]]) -> dict[str, float]:
     totals: dict[str, list[float]] = {}
-    for metrics in metrics_list:
+    for sample_idx, metrics in enumerate(metrics_list):
         for key, value in metrics.items():
             numeric = float(value)
             if not math.isfinite(numeric):
-                continue
+                raise ValueError(
+                    f"Encountered non-finite metric during aggregation: "
+                    f"sample_index={sample_idx}, metric={key!r}, value={value!r}"
+                )
             totals.setdefault(key, []).append(numeric)
+    if not totals:
+        raise ValueError("No metrics were available for aggregation")
     return {key: sum(values) / len(values) for key, values in totals.items() if values}
+
+
+# TODO(P0): Add confidence intervals and statistical significance tests for metric
+# differences across models (bootstrap + DM/MCS style comparisons).
+# TODO(P1): Add horizon-wise metric aggregation and regime-sliced reporting.
+# TODO(P2): Add portfolio utility metrics and transaction cost overlays for finance use cases.
 
 
 def _render_markdown(payload: dict[str, Any]) -> str:

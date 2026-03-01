@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from cfevals.benchmarks.base import ScenarioSample
+from cfevals.context import ContextEvent
 from cfevals.engine.validation import normalize_samples, validate_forecast_result
 from cfevals.metrics.probabilistic import rcrps
 from cfevals.models.base import ForecastRequest, ForecastResult, Model
@@ -13,6 +15,7 @@ from cfevals.record import RecorderBase
 class ScenarioResult:
     sample_id: str
     metric: float
+    justification_text: str | None = None
 
 
 class ScenarioEvaluator:
@@ -27,10 +30,17 @@ class ScenarioEvaluator:
                     sample_id=sample.sample_id,
                 )
                 continue
+            context_events = sample.context_events or _context_from_text(sample.context_text)
+            if not context_events:
+                raise ValueError(
+                    f"scenario sample {sample.sample_id}: context is mandatory (no context_events/context_text provided)"
+                )
+            context_text = sample.context_text or _context_summary(context_events)
             request = ForecastRequest(
                 history=sample.history,
                 horizon=len(sample.future),
-                context_text=sample.context_text,
+                context_text=context_text,
+                context_events=context_events,
                 metadata=sample.metadata,
             )
             result = model.predict(request)
@@ -50,10 +60,20 @@ class ScenarioEvaluator:
             metric_value = float(sum(scores) / len(scores))
             recorder.record_event(
                 "scenario_result",
-                {"sample_id": sample.sample_id, "rcrps": metric_value},
+                {
+                    "sample_id": sample.sample_id,
+                    "rcrps": metric_value,
+                    "justification_text": result.justification_text,
+                },
                 sample_id=sample.sample_id,
             )
-            results.append(ScenarioResult(sample_id=sample.sample_id, metric=metric_value))
+            results.append(
+                ScenarioResult(
+                    sample_id=sample.sample_id,
+                    metric=metric_value,
+                    justification_text=result.justification_text,
+                )
+            )
         return results
 
 
@@ -78,3 +98,27 @@ def _sorted_quantile_keys(quantiles: dict[str, list[float]]) -> list[str]:
             return (1, key)
 
     return sorted(quantiles.keys(), key=sort_key)
+
+
+def _context_from_text(text: str | None) -> list[ContextEvent]:
+    if not text:
+        return []
+    return [
+        ContextEvent(
+            event_time=datetime(1970, 1, 1),
+            available_at=datetime(1970, 1, 1),
+            text=text,
+            modality="text",
+            source="scenario_context",
+        )
+    ]
+
+
+def _context_summary(events: list[ContextEvent]) -> str:
+    first = events[0]
+    last = events[-1]
+    return (
+        "Timestamped context is attached via context_events. "
+        f"events={len(events)}, first_available_at={first.as_of_time.isoformat()}, "
+        f"last_available_at={last.as_of_time.isoformat()}."
+    )

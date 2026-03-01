@@ -5,7 +5,13 @@ import numpy as np
 
 def crps(samples: list[float], target: float) -> float:
     arr = np.asarray(samples, dtype=float)
+    if arr.size == 0:
+        raise ValueError("CRPS requires at least one sample")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError("CRPS samples must be finite")
     target_val = float(target)
+    if not np.isfinite(target_val):
+        raise ValueError("CRPS target must be finite")
     term1 = np.mean(np.abs(arr - target_val))
     term2 = 0.5 * np.mean(np.abs(arr[:, None] - arr[None, :]))
     return float(term1 - term2)
@@ -22,6 +28,8 @@ def rcrps(
     if roi is None:
         return base
     lower, upper = roi
+    if lower > upper:
+        raise ValueError(f"ROI lower bound {lower} is greater than upper bound {upper}")
     penalty = 0.0
     if target < lower:
         penalty = lower - target

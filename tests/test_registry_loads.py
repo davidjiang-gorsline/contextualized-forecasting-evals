@@ -8,6 +8,8 @@ def test_registry_loads():
     assert "benchmark.synthetic.hourly.v1" in registry.benchmarks
     assert "benchmark.synthetic.weekly.v1" in registry.benchmarks
     assert "benchmark.synthetic.monthly.v1" in registry.benchmarks
+    assert "benchmark.fnspid.news_volume.primary.v1" in registry.benchmarks
     assert "model.naive.last.v1" in registry.models
     assert "benchmark_set.starter.v1" in registry.benchmark_sets
     assert "benchmark_set.multifreq.v1" in registry.benchmark_sets
+    assert "benchmark_set.hedge_fund.v1" in registry.benchmark_sets

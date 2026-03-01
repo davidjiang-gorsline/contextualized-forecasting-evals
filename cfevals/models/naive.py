@@ -12,6 +12,11 @@ class LastValueModel(Model):
     def predict(self, request: ForecastRequest) -> ForecastResult:
         if request.history:
             value = float(request.history[-1])
+            justification = "Naive baseline: repeat the last observed value across the forecast horizon."
         else:
             value = self.fallback_value
-        return ForecastResult(point_forecast=[value for _ in range(request.horizon)])
+            justification = "Naive baseline fallback: no history available, using configured fallback value."
+        return ForecastResult(
+            point_forecast=[value for _ in range(request.horizon)],
+            justification_text=justification,
+        )

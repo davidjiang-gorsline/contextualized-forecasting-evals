@@ -1,0 +1,6 @@
+id: benchmark_set.hedge_fund.v1
+type: benchmark_set
+benchmarks:
+  - benchmark.fnspid.news_volume.primary.v1
+  - benchmark.synthetic.daily.v1
+  - benchmark.cik.v1

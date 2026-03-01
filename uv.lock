@@ -201,6 +201,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "datasets" },
+    { name = "huggingface-hub" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "pyyaml" },
@@ -230,6 +231,7 @@ requires-dist = [
     { name = "black", marker = "extra == 'formatters'" },
     { name = "chronos-forecasting", marker = "extra == 'chronos'" },
     { name = "datasets" },
+    { name = "huggingface-hub" },
     { name = "isort", marker = "extra == 'formatters'" },
     { name = "numpy" },
     { name = "openai", marker = "extra == 'openai'" },

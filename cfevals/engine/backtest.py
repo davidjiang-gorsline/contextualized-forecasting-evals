@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from cfevals.benchmarks.base import TimeSeriesDataset, WalkForwardWindow
+from cfevals.context import ContextEvent
 from cfevals.engine.validation import validate_forecast_result
 from cfevals.metrics.point import mae, mase, rmse, smape
 from cfevals.models.base import ForecastRequest, ForecastResult, Model
@@ -28,6 +29,7 @@ class BacktestResult:
     forecast: list[float]
     actual: list[float]
     metrics: dict[str, float]
+    justification_text: str | None = None
 
 
 class WalkForwardBacktester:
@@ -41,6 +43,7 @@ class WalkForwardBacktester:
     ) -> list[BacktestResult]:
         _validate_config(config)
         results: list[BacktestResult] = []
+        _validate_dataset_context(dataset)
         model.reset()
         trained_once = False
         seasonal_period = _seasonal_period(dataset)
@@ -65,6 +68,7 @@ class WalkForwardBacktester:
                 forecast=forecast_result.point_forecast,
                 actual=window.future,
                 metrics=metrics,
+                justification_text=forecast_result.justification_text,
             )
             recorder.record_event(
                 "walk_forward_window",
@@ -74,6 +78,8 @@ class WalkForwardBacktester:
                     "forecast": result.forecast,
                     "actual": result.actual,
                     "metrics": result.metrics,
+                    "context_event_count": len(request.context_events or []),
+                    "justification_text": result.justification_text,
                 },
                 sample_id=sample_id,
             )
@@ -97,12 +103,22 @@ def _should_retrain(window: WalkForwardWindow, config: WalkForwardConfig, traine
     return window.window_index % max(config.retrain_frequency, 1) == 0
 
 
-def _build_request(window: WalkForwardWindow, horizon: int) -> ForecastRequest:
+def _build_request(
+    window: WalkForwardWindow,
+    horizon: int,
+) -> ForecastRequest:
+    if not window.context_events:
+        raise ValueError(
+            f"backtest window {window.window_index}: context_events is empty at as_of={window.as_of.isoformat()}"
+        )
+    context_text = _context_summary(window.context_events)
     return ForecastRequest(
         history=window.history,
         horizon=horizon,
         timestamps=window.history_timestamps,
         features=window.history_features,
+        context_text=context_text,
+        context_events=window.context_events,
     )
 
 
@@ -161,3 +177,28 @@ def _seasonal_period(dataset: TimeSeriesDataset) -> int:
         "A": 1,
     }
     return by_freq.get(dataset.frequency.upper()[0], 1)
+
+
+def _validate_dataset_context(dataset: TimeSeriesDataset) -> None:
+    if not dataset.context_events:
+        raise ValueError(
+            "TimeSeriesDataset.context_events is empty. Context is mandatory in this contextualized harness."
+        )
+
+
+def _context_summary(events: list[ContextEvent]) -> str:
+    first = events[0]
+    last = events[-1]
+    return (
+        "Timestamped context is attached via context_events. "
+        f"events={len(events)}, first_available_at={first.as_of_time.isoformat()}, "
+        f"last_available_at={last.as_of_time.isoformat()}."
+    )
+
+
+# TODO(P0): Add purged/embargoed walk-forward variants and explicit as-of validation
+# hooks for feature/context availability to prove zero leakage in event-driven datasets.
+# TODO(P1): Add configurable context retrieval policies (recency, source filters, and
+# relevance scoring) before model requests are built.
+# TODO(P2): Add vectorized window materialization for large panel datasets to reduce
+# Python-loop overhead at scale.
