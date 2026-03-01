@@ -20,6 +20,13 @@ class ScenarioEvaluator:
         results: list[ScenarioResult] = []
         model.reset()
         for sample in samples:
+            if not sample.future:
+                recorder.record_event(
+                    "scenario_skipped",
+                    {"sample_id": sample.sample_id, "reason": "empty_future"},
+                    sample_id=sample.sample_id,
+                )
+                continue
             request = ForecastRequest(
                 history=sample.history,
                 horizon=len(sample.future),

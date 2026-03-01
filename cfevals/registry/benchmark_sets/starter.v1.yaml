@@ -1,5 +1,5 @@
 id: benchmark_set.starter.v1
 type: benchmark_set
 benchmarks:
-  - benchmark.fred.unrate.v1
+  - benchmark.synthetic.daily.v1
   - benchmark.cik.v1

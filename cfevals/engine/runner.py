@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -39,6 +40,11 @@ class Runner:
             dataset = benchmark.load()
             config = backtest_config or WalkForwardConfig(horizon=1)
             results = WalkForwardBacktester().run(dataset, model, config, recorder=recorder)
+            if not results:
+                raise ValueError(
+                    f"No walk-forward windows were produced for benchmark {benchmark_id!r}. "
+                    "Check horizon/min_train_size/max_windows settings."
+                )
             metrics = _aggregate_metrics([result.metrics for result in results])
             payload = {
                 "benchmark_id": benchmark_id,
@@ -49,6 +55,11 @@ class Runner:
         else:
             samples = benchmark.load()
             results = ScenarioEvaluator().run(samples, model, recorder=recorder)
+            if not results:
+                raise ValueError(
+                    f"No scenario samples were scored for benchmark {benchmark_id!r}. "
+                    "Check dataset parsing and sample filters."
+                )
             metrics = {"rcrps": sum(r.metric for r in results) / len(results) if results else 0.0}
             payload = {
                 "benchmark_id": benchmark_id,
@@ -67,7 +78,10 @@ def _aggregate_metrics(metrics_list: list[dict[str, float]]) -> dict[str, float]
     totals: dict[str, list[float]] = {}
     for metrics in metrics_list:
         for key, value in metrics.items():
-            totals.setdefault(key, []).append(float(value))
+            numeric = float(value)
+            if not math.isfinite(numeric):
+                continue
+            totals.setdefault(key, []).append(numeric)
     return {key: sum(values) / len(values) for key, values in totals.items() if values}
 
 

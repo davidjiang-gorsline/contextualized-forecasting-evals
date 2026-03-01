@@ -19,6 +19,11 @@ class BadQuantileModel(Model):
         return ForecastResult(point_forecast=[0.0] * request.horizon, quantiles={"0.5": [0.0]})
 
 
+class GoodPointModel(Model):
+    def predict(self, request: ForecastRequest) -> ForecastResult:
+        return ForecastResult(point_forecast=[0.0] * request.horizon)
+
+
 def test_backtest_validates_forecast_length():
     start = datetime(2024, 1, 1)
     points = [TimeSeriesPoint(timestamp=start + timedelta(days=i), value=float(i)) for i in range(8)]
@@ -34,3 +39,13 @@ def test_scenario_validates_quantiles():
     ]
     with pytest.raises(ValueError, match="quantile"):
         ScenarioEvaluator().run(samples, BadQuantileModel(), recorder=NullRecorder())
+
+
+def test_scenario_skips_empty_future():
+    samples = [
+        ScenarioSample(sample_id="empty", history=[1.0], future=[], context_text="ctx"),
+        ScenarioSample(sample_id="ok", history=[1.0], future=[2.0], context_text="ctx"),
+    ]
+    results = ScenarioEvaluator().run(samples, GoodPointModel(), recorder=NullRecorder())
+    assert len(results) == 1
+    assert results[0].sample_id == "ok"

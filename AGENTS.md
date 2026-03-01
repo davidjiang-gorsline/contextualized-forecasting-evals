@@ -8,7 +8,7 @@
 - Roadmap: expand to MoTime, FNSPID, TGTSF, MoAT, Time-MMD, TimeText, News-Signal Library; add time-series CV utilities, detrend/deseasonalize helpers, event forecasting, and more model adapters (TimeGPT, Chronos variants, ARIMA/Moirai baselines).
 
 ## Current Capabilities
-- Benchmarks: `benchmark.cik.v1` (Context Is Key), `benchmark.fred.unrate.v1` (FRED UNRATE walk-forward).
+- Benchmarks: `benchmark.cik.v1` (Context Is Key), synthetic multi-frequency walk-forward benchmarks (`benchmark.synthetic.{hourly,daily,weekly,monthly}.v1`).
 - Models: `model.naive.last.v1`, `model.chronos.t5.small.v1`, `model.openai.gpt4o-mini.v1` (optional extras).
 - CLI: `cfeval` and `cfevalset`.
 - Outputs: `outputs/<benchmark_id>/<run_id>/<model_id>/{events.jsonl,results.json,results.md}`.

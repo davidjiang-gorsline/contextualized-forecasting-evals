@@ -6,6 +6,7 @@ Registry-first evaluation harness for contextualized time-series forecasting wit
 - Uniform interfaces for contextualized models (LLMs, foundation time-series models, regressors).
 - Scenario benchmarks (context + RCRPS) and time-series benchmarks (walk-forward metrics).
 - Deterministic walk-forward backtesting with no leakage and versioned registry entries.
+- Frequency-aware evaluation via hourly/daily/weekly/monthly synthetic benchmarks.
 
 ## Quickstart (uv + Python 3.13)
 
@@ -18,14 +19,15 @@ uv sync --extra dev
 ## Run benchmarks
 
 ```bash
+cfeval benchmark.synthetic.daily.v1 --model model.naive.last.v1
 cfeval benchmark.cik.v1 --model model.naive.last.v1
-cfeval benchmark.fred.unrate.v1 --model model.naive.last.v1
 ```
 
 Run the starter set:
 
 ```bash
 cfevalset benchmark_set.starter.v1 --model model.naive.last.v1
+cfevalset benchmark_set.multifreq.v1 --model model.naive.last.v1
 ```
 
 ## Outputs

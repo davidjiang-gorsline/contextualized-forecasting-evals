@@ -1,0 +1,7 @@
+id: benchmark_set.multifreq.v1
+type: benchmark_set
+benchmarks:
+  - benchmark.synthetic.hourly.v1
+  - benchmark.synthetic.daily.v1
+  - benchmark.synthetic.weekly.v1
+  - benchmark.synthetic.monthly.v1

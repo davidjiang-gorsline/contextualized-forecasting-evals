@@ -1,0 +1,13 @@
+id: benchmark.synthetic.weekly.v1
+type: benchmark
+kind: time_series
+class: cfevals.benchmarks.synthetic:SyntheticSeasonalBenchmark
+args:
+  frequency: "W"
+  periods: 260
+  start: "2018-01-07"
+backtest:
+  horizon: 8
+  step: 1
+  min_train_size: 104
+  max_train_size: 208

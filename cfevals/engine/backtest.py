@@ -39,24 +39,25 @@ class WalkForwardBacktester:
         *,
         recorder: RecorderBase,
     ) -> list[BacktestResult]:
+        _validate_config(config)
         results: list[BacktestResult] = []
         model.reset()
         trained_once = False
+        seasonal_period = _seasonal_period(dataset)
 
         for window in _windows(dataset, config):
+            request = _build_request(window, config.horizon)
             if _should_retrain(window, config, trained_once):
-                train_request = _build_request(window, config.horizon)
-                model.fit(train_request)
+                model.fit(request)
                 trained_once = True
 
-            request = _build_request(window, config.horizon)
             forecast_result = model.predict(request)
             validate_forecast_result(
                 forecast_result,
                 config.horizon,
                 context=f"backtest window {window.window_index}",
             )
-            metrics = _compute_metrics(window, forecast_result)
+            metrics = _compute_metrics(window, forecast_result, seasonal_period=seasonal_period)
             sample_id = f"{window.window_index:05d}-{window.as_of.date()}"
             result = BacktestResult(
                 sample_id=sample_id,
@@ -105,11 +106,58 @@ def _build_request(window: WalkForwardWindow, horizon: int) -> ForecastRequest:
     )
 
 
-def _compute_metrics(window: WalkForwardWindow, result: ForecastResult) -> dict[str, float]:
+def _compute_metrics(
+    window: WalkForwardWindow,
+    result: ForecastResult,
+    *,
+    seasonal_period: int,
+) -> dict[str, float]:
     metrics = {
         "mae": mae(window.future, result.point_forecast),
         "rmse": rmse(window.future, result.point_forecast),
         "smape": smape(window.future, result.point_forecast),
-        "mase": mase(window.future, result.point_forecast, window.history),
+        "mase": mase(
+            window.future,
+            result.point_forecast,
+            window.history,
+            seasonal_period=seasonal_period,
+        ),
     }
     return metrics
+
+
+def _validate_config(config: WalkForwardConfig) -> None:
+    if config.horizon <= 0:
+        raise ValueError("horizon must be greater than zero")
+    if config.step <= 0:
+        raise ValueError("step must be greater than zero")
+    if config.min_train_size <= 0:
+        raise ValueError("min_train_size must be greater than zero")
+    if config.max_train_size is not None and config.max_train_size <= 0:
+        raise ValueError("max_train_size must be greater than zero when provided")
+    if config.max_train_size is not None and config.max_train_size < config.min_train_size:
+        raise ValueError("max_train_size must be >= min_train_size")
+    if config.retrain_frequency <= 0:
+        raise ValueError("retrain_frequency must be greater than zero")
+    if config.max_windows is not None and config.max_windows <= 0:
+        raise ValueError("max_windows must be greater than zero when provided")
+
+
+def _seasonal_period(dataset: TimeSeriesDataset) -> int:
+    if dataset.metadata and dataset.metadata.get("seasonal_period") is not None:
+        candidate = dataset.metadata.get("seasonal_period")
+        if isinstance(candidate, int) and candidate > 0:
+            return candidate
+    if not dataset.frequency:
+        return 1
+    by_freq = {
+        "H": 24,
+        "D": 7,
+        "B": 5,
+        "W": 52,
+        "M": 12,
+        "Q": 4,
+        "Y": 1,
+        "A": 1,
+    }
+    return by_freq.get(dataset.frequency.upper()[0], 1)

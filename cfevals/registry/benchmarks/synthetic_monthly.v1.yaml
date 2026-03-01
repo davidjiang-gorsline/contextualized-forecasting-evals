@@ -1,0 +1,13 @@
+id: benchmark.synthetic.monthly.v1
+type: benchmark
+kind: time_series
+class: cfevals.benchmarks.synthetic:SyntheticSeasonalBenchmark
+args:
+  frequency: "MS"
+  periods: 180
+  start: "2010-01-01"
+backtest:
+  horizon: 12
+  step: 1
+  min_train_size: 60
+  max_train_size: 120

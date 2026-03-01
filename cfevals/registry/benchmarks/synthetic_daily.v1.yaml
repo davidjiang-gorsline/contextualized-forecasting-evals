@@ -1,0 +1,13 @@
+id: benchmark.synthetic.daily.v1
+type: benchmark
+kind: time_series
+class: cfevals.benchmarks.synthetic:SyntheticSeasonalBenchmark
+args:
+  frequency: "D"
+  periods: 180
+  start: "2023-01-01"
+backtest:
+  horizon: 14
+  step: 1
+  min_train_size: 60
+  max_train_size: 120

@@ -7,7 +7,6 @@ dependencies = [
     "datasets",
     "numpy",
     "pandas",
-    "pandas-datareader",
     "pyyaml",
 ]
 

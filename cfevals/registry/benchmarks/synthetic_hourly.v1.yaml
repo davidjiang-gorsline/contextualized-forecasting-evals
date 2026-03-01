@@ -1,0 +1,13 @@
+id: benchmark.synthetic.hourly.v1
+type: benchmark
+kind: time_series
+class: cfevals.benchmarks.synthetic:SyntheticSeasonalBenchmark
+args:
+  frequency: "H"
+  periods: 240
+  start: "2024-01-01"
+backtest:
+  horizon: 6
+  step: 1
+  min_train_size: 48
+  max_train_size: null
